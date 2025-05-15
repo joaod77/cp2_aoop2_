@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import axios from '../services/axios';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import '../App.css';
 
@@ -8,38 +8,36 @@ function HomePage() {
   const navigate = useNavigate();
 
   const queryParams = new URLSearchParams(location.search);
-  const initialQuery = queryParams.get('query') || '';
-  const initialPage = parseInt(queryParams.get('page')) || 1;
+  const query = queryParams.get('query') || '';
+  const page = parseInt(queryParams.get('page')) || 1;
+
+  const [search, setSearch] = useState(query);
+  const [movies, setMovies] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
-
-  const [movies, setMovies] = useState([]);
-  const [search, setSearch] = useState(initialQuery);
-  const [query, setQuery] = useState(initialQuery);
-  const [currentPage, setCurrentPage] = useState(initialPage);
-  const [totalPages, setTotalPages] = useState(1);
+  useEffect(() => {
+    setSearch(query);
+  }, [query]);
 
   useEffect(() => {
     setLoading(true);
-    axios.get(`/api/movies?page=${currentPage}&search=${query}`)
+    axios.get(`/api/movies?page=${page}&search=${query}`)
       .then(res => {
         setMovies(res.data.movies);
         setTotalPages(res.data.totalPages);
       })
       .catch(err => console.error('Error fetching movies:', err))
       .finally(() => setLoading(false));
-  }, [currentPage, query]);
-
-  const handlePageClick = (page) => {
-    setCurrentPage(page);
-    navigate(`/?query=${query}&page=${page}`);
-  };
+  }, [page, query]);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    setQuery(search);
-    setCurrentPage(1);
     navigate(`/?query=${search}&page=1`);
+  };
+
+  const handlePageClick = (p) => {
+    navigate(`/?query=${query}&page=${p}`);
   };
 
   return (
@@ -74,10 +72,9 @@ function HomePage() {
             <div className="grid">
               {movies.map((movie) => (
                 <Link
-                  to={`/movie/${movie._id}`}
+                  to={`/movie/${movie._id}?query=${query}&page=${page}`}
                   key={movie._id}
                   className="card"
-                  state={{ page: currentPage, query }}
                 >
                   <img src={movie.poster} alt={movie.title} />
                   <h2>{movie.title}</h2>
@@ -87,21 +84,20 @@ function HomePage() {
 
             <div className="pagination">
               {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .slice(Math.max(0, currentPage - 3), currentPage + 2)
-                .map((page) => (
+                .slice(Math.max(0, page - 3), page + 2)
+                .map((p) => (
                   <button
-                    key={page}
-                    onClick={() => handlePageClick(page)}
-                    className={page === currentPage ? 'active' : ''}
+                    key={p}
+                    onClick={() => handlePageClick(p)}
+                    className={p === page ? 'active' : ''}
                   >
-                    {page}
+                    {p}
                   </button>
                 ))}
             </div>
           </>
         )}
       </div>
-
     </>
   );
 }
